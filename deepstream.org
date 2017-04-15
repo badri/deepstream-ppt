@@ -13,74 +13,210 @@
 * About me
 #+ATTR_REVEAL: :frag (roll-in roll-in roll-in roll-in)
 - full stack developer
-- been doing devops before it was termed "devops"
+- building webapps since 2009
 
 * Intro 
 #+ATTR_REVEAL: :frag (roll-in roll-in)
-- You need to monitor your stack, like NOW.
-- The open source monitoring landscape
+- Takeaway: Build more real-time stuff
+- defining real-time
 
-* But why Sensu?
+* What is Deepstream
+#+ATTR_REVEAL: :frag (roll-in roll-in roll-in roll-in)
+- open source
+- real-time
+- unopinionated
 
-* Sensu architecture
+* Comparisons 
 
-[[./images/sensu-diagram.gif]]
+** Firebase
+[[./images/firebase.png]]
+https://firebase.google.com/
 
-* Dashboards
+** RethinkDB
+[[./images/rethinkdb.jpg]]
+https://www.rethinkdb.com/
 
-** Uchiwa
+** Horizon
+[[./images/horizon.png]]
+http://horizon.io/
 
-[[./images/uchiwa.png]]
+** Why not just use websockets?
 
-** Graphite
+* Model
+[[./images/internal-workings.svg]]
 
-** Graphana
+* How data is moved around
 
-* Sensu components
+** Records
 
-** Checks
+*** One client updates records
+#+BEGIN_SRC text
+// Client B: Delivery driver's smartphone feeds position into record
+const driver = client.record.getRecord('driver/jack')
+navigator.geolocation.watchPosition(position => {
+  driver.set('coords', position.coords)
+})
+#+END_SRC
 
-** Handlers
+*** Another client gets notification
+#+BEGIN_SRC text
+// Client A: Hungry customer sees pizza delivery approach on map
+const driver = client.record.getRecord('driver/jack')
+driver.subscribe('coords', updateMapPointer)
+#+END_SRC
 
-** Filters
+** RPCs
+Same as and AJAX request-response, but with extra capabilities.
 
-** Mutators
+*** Provider
+#+BEGIN_SRC text
+client.rpc.provide( 'add-two-numbers', ( data, response ) => {
+    response.send( data.numA + data.numB );
+});
+#+END_SRC
 
-* Sensu API
+*** Invoker
+#+BEGIN_SRC text
+client.rpc.make( 'add-two-numbers', { numA: 7, numB: 13 }, ( err, result ) => {
+    // result == 20;
+});
+#+END_SRC
 
-** plugins
+*** RPCs are context aware
+#+BEGIN_SRC text
+//Limiting to 50 simultanious image resize tasks at a time
+var inProgress = 0;
+client.rpc.provide( 'resize-image', ( url, response ) => {
+    inProgress++;
 
-* Event handlers
+    if( inProgress > 50 ) {
+        response.reject();
+    } else {
+        resizeImage( url ).then(() => {
+            inProgress--;
+            response.send( 'done' );
+        });
+    }
+});
+#+END_SRC
 
-** email, SMS and the whole 9 yards
+** Events
 
-** Custom handlers
+*** Publish an event
+#+BEGIN_SRC text
+// Client B
+client.event.emit('news/sports', 'football is happening')
+#+END_SRC
 
-* The ecosystem
+*** Subscribe
+#+BEGIN_SRC text
+//Subscribing to an event
+client.event.subscribe('news/sports', tweetThis)
 
-** Lots of plugins
-http://sensu-plugins.io/
+function tweetThis(data) {
+    //callback for incoming events
+}
+#+END_SRC
 
-** commercial flavour
+* Storing data
 
-** New products
+** Storage connectors
+Object/Document/NoSQL databases make more sense than relational ones
 
-*** Amon
-https://www.amon.cx/
+** Cache connectors
+
+** message connectors
+
+* Clients
+js/Java/Obj-C/Swift
+
+* Authentication and permissions
+
+** Authentication
+
+*** None
+Don't use in production
+
+*** File based
+
+*** config
+#+BEGIN_SRC yaml
+# reading users and passwords from a file
+auth:
+ type: file
+ options:
+   path: ./users.yml # Path to the user file. Can be json, js or yml
+   hash: 'md5' # the name of a HMAC digest algorithm
+   iterations: 100 # the number of times the algorithm should be applied
+   keyLength: 32 # the length of the resulting key
+#+END_SRC
+
+*** users table
+#+BEGIN_SRC yaml
+badri:
+  password: "GPO+dr/0MoA1HAhIYREDc13zSK1/ywsRv2Wwo3gQ1TE=Mh62TJsaGBRORPtorRbyTw=="
+  data:
+    role: developer
+lakshmi:
+  password: "GPO+dr/0MoA1HAhIYREDc13zSK1/ywsRv2Wwo3gQ1TE=Mh62TJsaGBRORPtorRbyTw=="
+  data:
+   role: scrum-master
+#+END_SRC
+
+*** HTTP Auth
+#+BEGIN_SRC yaml
+type: http
+options:
+  endpointUrl: https://someurl.com/auth-user
+  permittedStatusCodes: [ 200 ]
+  requestTimeout: 2000
+#+END_SRC
+
+** Permissions
+DSL called Valve.
+
+#+BEGIN_SRC yaml
+record:
+    #an auctioned item
+    auction/item/$sellerId/$itemId:
+
+        #everyone can see the item and its price
+        read: true
+
+        #only users with canBid flag in their authData can bid
+        #and bids can only be higher than the current price
+        write: "user.data.canBid && data.price > oldData.price"
+
+        #only the seller can delete the item
+        delete: "user.id == $sellerId"
+#+END_SRC
+
+*** Syntax
+- Name (record, event or rpc name)
+    - Action( read, write, delete, publish etc.)
+
+* Scaling
+[[./images/deepstream-scaling.png]]
 
 * Examples and use cases
 
-** Webapp
+** Financial trading
 
-** Big data stack
+** Realtime analytics
 
-** Containers
+** Multiplayer games
+
+* Demo time
 
 * Resources
 
-** The art of monitoring book
-https://www.artofmonitoring.com/
+** Commercial offering
+https://deepstreamhub.com/
 
-** Deploy Sensu using Ansible
+** Real-time landscape
+https://deepstream.io/blog/realtime-framework-overview/
+
+** Deploying in DigitalOcean
+https://deepstream.io/tutorials/integrations/other-digital-ocean/
 
 * ?s

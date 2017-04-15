@@ -3,11 +3,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Full stack monitoring using Sensu</title>
+<title>Go realtime with Deepstream</title>
 <meta name="author" content="(Lakshmi Narasimhan)"/>
 
-<link rel="stylesheet" href="css/reveal.css"/>
-<link rel="stylesheet" href="css/night.css" id="theme"/>
+<link rel="stylesheet" href="http://cdn.jsdelivr.net/reveal.js/3.0.0/css/reveal.css"/>
+<link rel="stylesheet" href="http://cdn.jsdelivr.net/reveal.js/3.0.0/css/theme/night.css" id="theme"/>
 
 <!-- If the query includes 'print-pdf', include the PDF print sheet -->
 <script>
@@ -24,7 +24,7 @@
 <div class="reveal">
 <div class="slides">
 <section id="sec-title-slide">
-<h1>Full stack monitoring using Sensu</h1>
+<h1>Go realtime with Deepstream</h1>
 <h2>Lakshmi Narasimhan</h2>
 <h2><a href="mailto:@lakshminp">@lakshminp</a></h2>
 <h2></h2>
@@ -35,7 +35,7 @@
 <h2 >About me</h2>
 <ul >
 <li class="fragment roll-in">full stack developer</li>
-<li class="fragment roll-in">been doing devops before it was termed "devops"</li>
+<li class="fragment roll-in">building webapps since 2009</li>
 
 </ul>
 
@@ -44,208 +44,434 @@
 
 <h2 >Intro</h2>
 <ul >
-<li class="fragment roll-in">You need to monitor your stack, like NOW.</li>
-<li class="fragment roll-in">The open source monitoring landscape</li>
+<li class="fragment roll-in">Takeaway: Build more real-time stuff</li>
+<li class="fragment roll-in">defining real-time</li>
 
 </ul>
 
 </section>
 <section id="sec-3">
 
-<h2 >But why Sensu?</h2>
+<h2 >What is Deepstream</h2>
+<ul >
+<li class="fragment roll-in">open source</li>
+<li class="fragment roll-in">real-time</li>
+<li class="fragment roll-in">unopinionated</li>
+
+</ul>
 
 </section>
 <section id="sec-4">
 
-<h2 >Sensu architecture</h2>
+<h2 >Comparisons</h2>
+</section>
+<section>
+<section id="sec-4-1">
 
-<div class="figure">
-<p><img src="./images/sensu-diagram.gif" alt="sensu-diagram.gif" />
+<h3 >Firebase</h3>
+<p>
+<img src="./images/firebase.png" alt="firebase.png" />
+<a href="https://firebase.google.com/">https://firebase.google.com/</a>
 </p>
-</div>
+</section>
+
+</section>
+<section>
+<section id="sec-4-2">
+
+<h3 >RethinkDB</h3>
+<p>
+<img src="./images/rethinkdb.jpg" alt="rethinkdb.jpg" />
+<a href="https://www.rethinkdb.com/">https://www.rethinkdb.com/</a>
+</p>
+</section>
+
+</section>
+<section>
+<section id="sec-4-3">
+
+<h3 >Horizon</h3>
+<p>
+<img src="./images/horizon.png" alt="horizon.png" />
+<a href="http://horizon.io/">http://horizon.io/</a>
+</p>
+</section>
+
+</section>
+<section>
+<section id="sec-4-4">
+
+<h3 >Why not just use websockets?</h3>
+</section>
 
 </section>
 <section id="sec-5">
 
-<h2 >Dashboards</h2>
-</section>
-<section>
-<section id="sec-5-1">
-
-<h3 >Uchiwa</h3>
+<h2 >Model</h2>
 
 <div class="figure">
-<p><img src="./images/uchiwa.png" alt="uchiwa.png" />
+<p><object type="image/svg+xml" data="./images/internal-workings.svg" >
+Sorry, your browser does not support SVG.</object>
 </p>
 </div>
-</section>
-
-</section>
-<section>
-<section id="sec-5-2">
-
-<h3 >Graphite</h3>
-</section>
-
-</section>
-<section>
-<section id="sec-5-3">
-
-<h3 >Graphana</h3>
-</section>
 
 </section>
 <section id="sec-6">
 
-<h2 >Sensu components</h2>
+<h2 >How data is moved around</h2>
 </section>
 <section>
 <section id="sec-6-1">
 
-<h3 >Checks</h3>
+<h3 >Records</h3>
+</section>
+<section id="sec-6-1-1">
+
+<h4 >One client updates records</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">// Client B: Delivery driver's smartphone feeds position into record
+const driver = client.record.getRecord('driver/jack')
+navigator.geolocation.watchPosition(position =&gt; {
+  driver.set('coords', position.coords)
+})
+</pre>
+</div>
+
+</section>
+<section id="sec-6-1-2">
+
+<h4 >Another client gets notification</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">// Client A: Hungry customer sees pizza delivery approach on map
+const driver = client.record.getRecord('driver/jack')
+driver.subscribe('coords', updateMapPointer)
+</pre>
+</div>
 </section>
 
 </section>
 <section>
 <section id="sec-6-2">
 
-<h3 >Handlers</h3>
+<h3 >RPCs</h3>
+<p>
+Same as and AJAX request-response, but with extra capabilities.
+</p>
+
+</section>
+<section id="sec-6-2-1">
+
+<h4 >Provider</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">client.rpc.provide( 'add-two-numbers', ( data, response ) =&gt; {
+    response.send( data.numA + data.numB );
+});
+</pre>
+</div>
+
+</section>
+<section id="sec-6-2-2">
+
+<h4 >Invoker</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">client.rpc.make( 'add-two-numbers', { numA: 7, numB: 13 }, ( err, result ) =&gt; {
+    // result == 20;
+});
+</pre>
+</div>
+
+</section>
+<section id="sec-6-2-3">
+
+<h4 >RPCs are context aware</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">//Limiting to 50 simultanious image resize tasks at a time
+var inProgress = 0;
+client.rpc.provide( 'resize-image', ( url, response ) =&gt; {
+    inProgress++;
+
+    if( inProgress &gt; 50 ) {
+        response.reject();
+    } else {
+        resizeImage( url ).then(() =&gt; {
+            inProgress--;
+            response.send( 'done' );
+        });
+    }
+});
+</pre>
+</div>
 </section>
 
 </section>
 <section>
 <section id="sec-6-3">
 
-<h3 >Filters</h3>
+<h3 >Events</h3>
 </section>
+<section id="sec-6-3-1">
+
+<h4 >Publish an event</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">// Client B
+client.event.emit('news/sports', 'football is happening')
+</pre>
+</div>
 
 </section>
-<section>
-<section id="sec-6-4">
+<section id="sec-6-3-2">
 
-<h3 >Mutators</h3>
+<h4 >Subscribe</h4>
+<div class="org-src-container">
+
+<pre  class="src src-text">//Subscribing to an event
+client.event.subscribe('news/sports', tweetThis)
+
+function tweetThis(data) {
+    //callback for incoming events
+}
+</pre>
+</div>
 </section>
 
 </section>
 <section id="sec-7">
 
-<h2 >Sensu API</h2>
+<h2 >Storing data</h2>
 </section>
 <section>
 <section id="sec-7-1">
 
-<h3 >plugins</h3>
+<h3 >Storage connectors</h3>
+<p>
+Object/Document/NoSQL databases make more sense than relational ones
+</p>
+</section>
+
+</section>
+<section>
+<section id="sec-7-2">
+
+<h3 >Cache connectors</h3>
+</section>
+
+</section>
+<section>
+<section id="sec-7-3">
+
+<h3 >message connectors</h3>
 </section>
 
 </section>
 <section id="sec-8">
 
-<h2 >Event handlers</h2>
-</section>
-<section>
-<section id="sec-8-1">
-
-<h3 >email, SMS and the whole 9 yards</h3>
-</section>
-
-</section>
-<section>
-<section id="sec-8-2">
-
-<h3 >Custom handlers</h3>
-</section>
+<h2 >Clients</h2>
+<p>
+js/Java/Obj-C/Swift
+</p>
 
 </section>
 <section id="sec-9">
 
-<h2 >The ecosystem</h2>
+<h2 >Authentication and permissions</h2>
 </section>
 <section>
 <section id="sec-9-1">
 
-<h3 >Lots of plugins</h3>
+<h3 >Authentication</h3>
+</section>
+<section id="sec-9-1-1">
+
+<h4 >None</h4>
 <p>
-<a href="http://sensu-plugins.io/">http://sensu-plugins.io/</a>
+Don't use in production
 </p>
+
+</section>
+<section id="sec-9-1-2">
+
+<h4 >File based</h4>
+
+</section>
+<section id="sec-9-1-3">
+
+<h4 >config</h4>
+<div class="org-src-container">
+
+<pre  class="src src-yaml"><span style="color: #865C38; font-style: italic;"># </span><span style="color: #865C38; font-style: italic;">reading users and passwords from a file</span>
+<span style="color: #7DAF9C;">auth</span>:
+ <span style="color: #7DAF9C;">type</span>: file
+ <span style="color: #7DAF9C;">options</span>:
+   <span style="color: #7DAF9C;">path</span>: ./users.yml <span style="color: #865C38; font-style: italic;"># </span><span style="color: #865C38; font-style: italic;">Path to the user file. Can be json, js or yml</span>
+   <span style="color: #7DAF9C;">hash</span>: <span style="color: #D9D762;">'md5'</span> <span style="color: #865C38; font-style: italic;"># </span><span style="color: #865C38; font-style: italic;">the name of a HMAC digest algorithm</span>
+   <span style="color: #7DAF9C;">iterations</span>: 100 <span style="color: #865C38; font-style: italic;"># </span><span style="color: #865C38; font-style: italic;">the number of times the algorithm should be applied</span>
+   <span style="color: #7DAF9C;">keyLength</span>: 32 <span style="color: #865C38; font-style: italic;"># </span><span style="color: #865C38; font-style: italic;">the length of the resulting key</span>
+</pre>
+</div>
+
+</section>
+<section id="sec-9-1-4">
+
+<h4 >users table</h4>
+<div class="org-src-container">
+
+<pre  class="src src-yaml"><span style="color: #7DAF9C;">badri</span>:
+  <span style="color: #7DAF9C;">password</span>: <span style="color: #D9D762;">"GPO+dr/0MoA1HAhIYREDc13zSK1/ywsRv2Wwo3gQ1TE=Mh62TJsaGBRORPtorRbyTw=="</span>
+  <span style="color: #7DAF9C;">data</span>:
+    <span style="color: #7DAF9C;">role</span>: developer
+<span style="color: #7DAF9C;">lakshmi</span>:
+  <span style="color: #7DAF9C;">password</span>: <span style="color: #D9D762;">"GPO+dr/0MoA1HAhIYREDc13zSK1/ywsRv2Wwo3gQ1TE=Mh62TJsaGBRORPtorRbyTw=="</span>
+  <span style="color: #7DAF9C;">data</span>:
+   <span style="color: #7DAF9C;">role</span>: scrum-master
+</pre>
+</div>
+
+</section>
+<section id="sec-9-1-5">
+
+<h4 >HTTP Auth</h4>
+<div class="org-src-container">
+
+<pre  class="src src-yaml"><span style="color: #7DAF9C;">type</span>: http
+<span style="color: #7DAF9C;">options</span>:
+  <span style="color: #7DAF9C;">endpointUrl</span>: https://someurl.com/auth-user
+  <span style="color: #7DAF9C;">permittedStatusCodes</span>: [ 200 ]
+  <span style="color: #7DAF9C;">requestTimeout</span>: 2000
+</pre>
+</div>
 </section>
 
 </section>
 <section>
 <section id="sec-9-2">
 
-<h3 >commercial flavour</h3>
-</section>
-
-</section>
-<section>
-<section id="sec-9-3">
-
-<h3 >New products</h3>
-</section>
-<section id="sec-9-3-1">
-
-<h4 >Amon</h4>
+<h3 >Permissions</h3>
 <p>
-<a href="https://www.amon.cx/">https://www.amon.cx/</a>
+DSL called Valve.
 </p>
+
+<div class="org-src-container">
+
+<pre  class="src src-yaml"><span style="color: #7DAF9C;">record</span>:
+    <span style="color: #865C38; font-style: italic;">#</span><span style="color: #865C38; font-style: italic;">an auctioned item</span>
+    <span style="color: #7DAF9C;">auction/item/$sellerId/$itemId</span>:
+
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #865C38; font-style: italic;">#</span><span style="color: #865C38; font-style: italic;">everyone can see the item and its price</span>
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #7DAF9C;">read</span>: <span style="color: #6C99BB;">true</span>
+
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #865C38; font-style: italic;">#</span><span style="color: #865C38; font-style: italic;">only users with canBid flag in their authData can bid</span>
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #865C38; font-style: italic;">#</span><span style="color: #865C38; font-style: italic;">and bids can only be higher than the current price</span>
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #7DAF9C;">write</span>: <span style="color: #D9D762;">"user.data.canBid &amp;&amp; data.price &gt; oldData.price"</span>
+
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #865C38; font-style: italic;">#</span><span style="color: #865C38; font-style: italic;">only the seller can delete the item</span>
+<span style="color: #ff0000; background-color: #ff0000; font-weight: bold;">        </span><span style="color: #7DAF9C;">delete</span>: <span style="color: #D9D762;">"user.id == $sellerId"</span>
+</pre>
+</div>
+
+</section>
+<section id="sec-9-2-1">
+
+<h4 >Syntax</h4>
+<ul >
+<li>Name (record, event or rpc name)
+<ul >
+<li>Action( read, write, delete, publish etc.)</li>
+
+</ul></li>
+
+</ul>
 </section>
 
 </section>
 <section id="sec-10">
 
-<h2 >Examples and use cases</h2>
-</section>
-<section>
-<section id="sec-10-1">
+<h2 >Scaling</h2>
 
-<h3 >Webapp</h3>
-</section>
-
-</section>
-<section>
-<section id="sec-10-2">
-
-<h3 >Big data stack</h3>
-</section>
-
-</section>
-<section>
-<section id="sec-10-3">
-
-<h3 >Containers</h3>
-</section>
+<div class="figure">
+<p><img src="./images/deepstream-scaling.png" alt="deepstream-scaling.png" />
+</p>
+</div>
 
 </section>
 <section id="sec-11">
 
-<h2 >Resources</h2>
+<h2 >Examples and use cases</h2>
 </section>
 <section>
 <section id="sec-11-1">
 
-<h3 >The art of monitoring book</h3>
-<p>
-<a href="https://www.artofmonitoring.com/">https://www.artofmonitoring.com/</a>
-</p>
+<h3 >Financial trading</h3>
 </section>
 
 </section>
 <section>
 <section id="sec-11-2">
 
-<h3 >Deploy Sensu using Ansible</h3>
+<h3 >Realtime analytics</h3>
+</section>
+
+</section>
+<section>
+<section id="sec-11-3">
+
+<h3 >Multiplayer games</h3>
 </section>
 
 </section>
 <section id="sec-12">
+
+<h2 >Demo time</h2>
+
+</section>
+<section id="sec-13">
+
+<h2 >Resources</h2>
+</section>
+<section>
+<section id="sec-13-1">
+
+<h3 >Commercial offering</h3>
+<p>
+<a href="https://deepstreamhub.com/">https://deepstreamhub.com/</a>
+</p>
+</section>
+
+</section>
+<section>
+<section id="sec-13-2">
+
+<h3 >Real-time landscape</h3>
+<p>
+<a href="https://deepstream.io/blog/realtime-framework-overview/">https://deepstream.io/blog/realtime-framework-overview/</a>
+</p>
+</section>
+
+</section>
+<section>
+<section id="sec-13-3">
+
+<h3 >Deploying in DigitalOcean</h3>
+<p>
+<a href="https://deepstream.io/tutorials/integrations/other-digital-ocean/">https://deepstream.io/tutorials/integrations/other-digital-ocean/</a>
+</p>
+</section>
+
+</section>
+<section id="sec-14">
 
 <h2 >?s</h2>
 </section>
 </div>
 </div>
 
-<script src="js/head.min.js"></script>
-<script src="js/reveal.js"></script>
+<script src="http://cdn.jsdelivr.net/reveal.js/3.0.0/lib/js/head.min.js"></script>
+<script src="http://cdn.jsdelivr.net/reveal.js/3.0.0/js/reveal.js"></script>
 
 <script>
 // Full list of configuration options available here:
@@ -272,6 +498,10 @@ multiplex: {
 
 // Optional libraries used to extend on reveal.js
 dependencies: [
+ { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+ { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
 ]
 });
 </script>
